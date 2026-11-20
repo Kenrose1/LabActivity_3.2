@@ -127,6 +127,10 @@ private fun WeatherResult(weather: WeatherResponse) {
             Column {
                 Text(weather.name, style = MaterialTheme.typography.headlineSmall)
                 Spacer(modifier = Modifier.height(4.dp))
+                weather.main?.let { main ->
+                    Text("${main.temp.toInt()}°F", style = MaterialTheme.typography.displayMedium)
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
                 Text(condition?.main ?: "Unknown", style = MaterialTheme.typography.titleLarge)
                 Text(condition?.description?.replaceFirstChar { it.uppercase() } ?: "")
             }
