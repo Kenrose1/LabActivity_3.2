@@ -5,7 +5,7 @@ import android.widget.ImageView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -32,10 +34,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,7 +45,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bumptech.glide.Glide
 import com.example.weatherapp.ui.theme.WeatherAppTheme
@@ -68,8 +69,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun WeatherApp(weatherViewModel: WeatherViewModel = viewModel()) {
-    var city by remember { mutableStateOf("") }
+    var city by rememberSaveable { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    val condition = weatherViewModel.weather?.weather?.firstOrNull()?.main
+    val backgroundColors = weatherBackground(condition)
 
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -77,69 +80,93 @@ private fun WeatherApp(weatherViewModel: WeatherViewModel = viewModel()) {
             TopAppBar(
                 title = { Text("☀  Weather App") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = WeatherBlue,
+                    containerColor = backgroundColors.first(),
                     titleContentColor = androidx.compose.ui.graphics.Color.White
                 )
             )
         }
     ) { paddingValues ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.verticalGradient(listOf(WeatherBlue, WeatherPurple, WeatherSky))
+                    Brush.verticalGradient(backgroundColors)
                 )
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            OutlinedTextField(
-                value = city,
-                onValueChange = { city = it },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = WeatherCard,
-                    unfocusedContainerColor = WeatherCard,
-                    focusedBorderColor = WeatherPurple,
-                    unfocusedBorderColor = WeatherBlue
-                ),
-                label = { Text("Search city") },
-                placeholder = { Text("Enter a city, e.g. New York") },
-                trailingIcon = {
-                    IconButton(
-                        onClick = { scope.launch { weatherViewModel.search(city) } },
-                        enabled = city.isNotBlank() && !weatherViewModel.isLoading
-                    ) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
-                    }
-                },
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                    imeAction = ImeAction.Search
-                ),
-                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                    onSearch = { scope.launch { weatherViewModel.search(city) } }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 620.dp)
+                    .align(Alignment.TopCenter),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                OutlinedTextField(
+                    value = city,
+                    onValueChange = { city = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedBorderColor = WeatherPurple,
+                        unfocusedBorderColor = WeatherBlue
+                    ),
+                    label = { Text("Search city") },
+                    placeholder = { Text("Enter a city, e.g. New York") },
+                    trailingIcon = {
+                        IconButton(
+                            onClick = { scope.launch { weatherViewModel.search(city) } },
+                            enabled = city.isNotBlank() && !weatherViewModel.isLoading
+                        ) {
+                            Icon(Icons.Default.Search, contentDescription = "Search")
+                        }
+                    },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        imeAction = ImeAction.Search
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onSearch = { scope.launch { weatherViewModel.search(city) } }
+                    )
                 )
-            )
 
-            Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
-            when {
-                weatherViewModel.isLoading -> CircularProgressIndicator()
-                weatherViewModel.errorMessage != null -> Text(
-                    text = weatherViewModel.errorMessage.orEmpty(),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                weatherViewModel.weather != null -> WeatherResult(weatherViewModel.weather!!)
-                else -> Text(
-                    text = "Search for a city to see its current weather.",
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                when {
+                    weatherViewModel.isLoading -> CircularProgressIndicator(color = Color.White)
+                    weatherViewModel.errorMessage != null -> Text(
+                        text = weatherViewModel.errorMessage.orEmpty(),
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    weatherViewModel.weather != null -> WeatherResult(weatherViewModel.weather!!)
+                    else -> Text(
+                        text = "Search for a city to see its current weather.",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
             }
         }
     }
+}
+
+private fun weatherBackground(condition: String?): List<Color> = when {
+    condition?.contains("rain", ignoreCase = true) == true -> listOf(
+        Color(0xFF155799), Color(0xFF159957), Color(0xFFB7E3FF)
+    )
+    condition?.contains("snow", ignoreCase = true) == true -> listOf(
+        Color(0xFF4FACFE), Color(0xFFB6E3FF), Color(0xFFF4FBFF)
+    )
+    condition?.contains("clear", ignoreCase = true) == true -> listOf(
+        Color(0xFFFF8A00), Color(0xFFFFC837), Color(0xFFFFF3B0)
+    )
+    condition?.contains("storm", ignoreCase = true) == true -> listOf(
+        Color(0xFF232526), Color(0xFF414345), Color(0xFF7B61FF)
+    )
+    else -> listOf(WeatherBlue, WeatherPurple, WeatherSky)
 }
 
 @Composable
