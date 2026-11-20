@@ -11,7 +11,8 @@ import retrofit2.http.Query
 data class WeatherResponse(
     val name: String,
     val weather: List<WeatherCondition>,
-    val main: MainInfo? = null
+    val main: MainInfo? = null,
+    val wind: WindInfo? = null
 )
 
 data class WeatherCondition(
@@ -23,7 +24,12 @@ data class WeatherCondition(
 data class MainInfo(
     val temp: Double,
     @field:Json(name = "feels_like") val feelsLike: Double? = null,
-    val humidity: Int? = null
+    val humidity: Int? = null,
+    val pressure: Int? = null
+)
+
+data class WindInfo(
+    val speed: Double? = null
 )
 
 interface WeatherApiService {

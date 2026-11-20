@@ -14,10 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,6 +30,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +47,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bumptech.glide.Glide
 import com.example.weatherapp.ui.theme.WeatherAppTheme
+import com.example.weatherapp.ui.theme.WeatherBlue
+import com.example.weatherapp.ui.theme.WeatherCard
+import com.example.weatherapp.ui.theme.WeatherPurple
+import com.example.weatherapp.ui.theme.WeatherSky
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 
@@ -63,11 +72,23 @@ private fun WeatherApp(weatherViewModel: WeatherViewModel = viewModel()) {
     val scope = rememberCoroutineScope()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Weather App") }) }
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        topBar = {
+            TopAppBar(
+                title = { Text("☀  Weather App") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = WeatherBlue,
+                    titleContentColor = androidx.compose.ui.graphics.Color.White
+                )
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(listOf(WeatherBlue, WeatherPurple, WeatherSky))
+                )
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -78,6 +99,12 @@ private fun WeatherApp(weatherViewModel: WeatherViewModel = viewModel()) {
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = WeatherCard,
+                    unfocusedContainerColor = WeatherCard,
+                    focusedBorderColor = WeatherPurple,
+                    unfocusedBorderColor = WeatherBlue
+                ),
                 label = { Text("Search city") },
                 placeholder = { Text("Enter a city, e.g. New York") },
                 trailingIcon = {
@@ -118,24 +145,64 @@ private fun WeatherApp(weatherViewModel: WeatherViewModel = viewModel()) {
 @Composable
 private fun WeatherResult(weather: WeatherResponse) {
     val condition = weather.weather.firstOrNull()
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
-            Column {
-                Text(weather.name, style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(4.dp))
-                weather.main?.let { main ->
-                    Text("${main.temp.toInt()}°F", style = MaterialTheme.typography.displayMedium)
-                    Spacer(modifier = Modifier.height(4.dp))
+    val measurements = weather.main
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = WeatherCard.copy(alpha = 0.96f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(weather.name, style = MaterialTheme.typography.headlineSmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = measurements?.let { "${it.temp.toInt()}°F" } ?: "--",
+                        style = MaterialTheme.typography.displaySmall
+                    )
+                    Text(condition?.main ?: "Unknown", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        condition?.description?.replaceFirstChar { it.uppercase() } ?: "",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                Text(condition?.main ?: "Unknown", style = MaterialTheme.typography.titleLarge)
-                Text(condition?.description?.replaceFirstChar { it.uppercase() } ?: "")
+                condition?.icon?.let { WeatherIcon(it) }
             }
-            condition?.icon?.let { WeatherIcon(it) }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                WeatherDetail("Feels like", measurements?.feelsLike?.let { "${it.toInt()}°F" } ?: "--")
+                WeatherDetail("Humidity", measurements?.humidity?.let { "$it%" } ?: "--")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                WeatherDetail("Wind", weather.wind?.speed?.let { "${it.toInt()} mph" } ?: "--")
+                WeatherDetail("Pressure", measurements?.pressure?.let { "$it hPa" } ?: "--")
+            }
         }
+    }
+}
+
+@Composable
+private fun WeatherDetail(label: String, value: String) {
+    Column(modifier = Modifier.padding(end = 12.dp)) {
+        Text(
+            text = label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelLarge
+        )
+        Text(value, style = MaterialTheme.typography.titleMedium)
     }
 }
 
