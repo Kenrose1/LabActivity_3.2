@@ -12,13 +12,13 @@ data class WeatherResponse(
     val name: String,
     val weather: List<WeatherCondition>,
     val main: MainInfo? = null,
-    val wind: WindInfo? = null
+    val wind: WindInfo? = null,
 )
 
 data class WeatherCondition(
     val main: String,
     val description: String,
-    val icon: String
+    val icon: String,
 )
 
 data class MainInfo(
